@@ -1,0 +1,342 @@
+#+TITLE: Emacs Configuration
+#+AUTHOR: Chris Bergquist
+
+* Summary
+This is my entire Emacs configuration file. Using an org file is an attempt to keep it organized...
+
+* Packages
+Initialize package management and install necessary packages for the rest of the file.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+  (package-initialize)
+  (require 'package)
+
+  (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/"))
+  (add-to-list 'package-archives '("melpa-stable" . "http://stable.melpa.org/packages/"))
+
+  (if (not (package-installed-p 'use-package))
+      (package-install 'use-package))
+
+  (if (not package-archive-contents)
+      (package-refresh-contents))
+
+  (package-initialize)
+
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+END_SRC
+
+* Org Configuration to Lisp
+Setup this file to tangle on save and compile to byte code.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+  (require 'org)
+
+  (defun tangle-init ()
+    "If the current buffer is 'init.org' the code-blocks are tangled, and the tangled file is compiled."
+    (when (equal (buffer-file-name)
+                 (expand-file-name (concat user-emacs-directory "init.org")))
+      ;; Avoid running hooks when tangling
+      (let ((prog-mode-hook nil))
+        (org-babel-tangle)
+        (byte-compile-file (concat user-emacs-directory "init.el")))))
+
+  (add-hook 'after-save-hook #'tangle-init)
+#+END_SRC
+
+* Emacs Behavior
+** General
+   General configuration to make the default behavior of Emacs better.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+  (use-package better-defaults)
+
+  (defvar backup-dir (expand-file-name (concat user-emacs-directory "backup/")))
+  (defvar autosave-dir (expand-file-name (concat user-emacs-directory "autosave/")))
+
+  (setq inhibit-startup-message t
+        initial-scratch-message nil
+        backup-directory-alist (list (cons ".*" backup-dir))
+        auto-save-list-file-prefix autosave-dir
+        auto-save-file-name-transforms `((".*" ,autosave-dir t)))
+
+  (menu-bar-mode 0)
+  (toggle-scroll-bar 0)
+  (tool-bar-mode 0)
+  (global-linum-mode t)
+  (global-auto-revert-mode t)
+
+  (defalias 'yes-or-no-p 'y-or-n-p)
+
+  (custom-set-variables
+   '(initial-frame-alist (quote ((fullscreen . maximized)))))
+  (add-to-list 'default-frame-alist '(font . "Essential PragmataPro 12"))
+
+  (setq ring-bell-function
+        (lambda ()
+          (let ((orig-fg (face-foreground 'mode-line)))
+            (set-face-foreground 'mode-line "#F2804F")
+            (run-with-idle-timer 0.1 nil
+                                 (lambda (fg) (set-face-foreground 'mode-line fg))
+                                 orig-fg))))
+
+  (global-set-key (kbd "C-c s") #'eshell)
+
+  (server-start)
+#+END_SRC
+
+** MacOS Specific
+   Configuration specific for MacOS (mainly for PATH loading).
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (when (memq window-system '(mac ns))
+       (setq ns-pop-up-frames nil
+             select-enable-clipboard t)
+       (when (fboundp 'mac-auto-operator-composition-mode)
+         (mac-auto-operator-composition-mode 1))
+       (exec-path-from-shell-initialize))
+   #+END_SRC
+
+* UI
+** Main Theme
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package solarized-theme
+       :config
+       (setq solarized-distinct-fringe-background t
+           solarized-high-contrast-mode-line t
+           solarized-emphasize-indicators nil
+           solarized-height-minus-1 1.0
+           solarized-height-plus-1 1.0
+           solarized-height-plus-2 1.0
+           solarized-height-plus-3 1.0
+           solarized-height-plus-4 1.0)
+
+       (load-theme 'solarized-dark t))
+   #+END_SRC
+
+** Modeline
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package powerline
+       :config (powerline-default-theme))
+
+     (use-package airline-themes
+       :config (load-theme 'airline-solarized-gui t))
+   #+END_SRC
+
+** Org Mode
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package org-bullets
+       :hook (org-mode . org-bullets-mode))
+   #+END_SRC
+
+* Tools
+** diminish
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package diminish
+       :demand
+       :config
+       (with-no-warnings
+         (diminish 'eldoc-mode)))
+   #+END_SRC
+
+** which-key
+   Sets up hints for keyboard shortcuts in minibuffer
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package which-key
+       :defer 10
+       :diminish which-key-mode
+       :config (setq which-key-popup-type 'minibuffer)
+       :hook (after-init . which-key-mode))
+   #+END_SRC
+
+** company
+   "Complete Anything"
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package company
+       :defer 10
+       :diminish company-mode
+       :hook (prog-mode . company-mode))
+   #+END_SRC
+
+** ivy
+   Better search and completion
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package counsel
+       :diminish counsel-mode ivy-mode
+       :defines (projectile-completion-system magit-completing-read-function)
+       :config
+       (setq ivy-use-virtual-buffers t
+             enable-recursive-minibuffers t
+             ivy-height 15
+             ivy-initial-inputs-alist nil
+             ivy-extra-directories nil
+             ivy-count-format "%d/%d ")
+
+       (with-eval-after-load 'projectile
+         (setq projectile-completion-system 'ivy))
+
+       (with-eval-after-load 'magit
+         (setq magit-completing-read-function 'ivy-completing-read))
+       :hook ((after-init . ivy-mode)
+              (ivy-mode . counsel-mode))
+       :config
+       :bind (("C-s" . swiper)
+              ("C-c C-r" . ivy-resume)
+              ("C-c g" . counsel-git)
+              ("C-c j" . counsel-git-grep)
+              :map minibuffer-local-map
+              ("C-r" . counsel-minibuffer-history)
+              :map ivy-minibuffer-map
+              ("<return>" . ivy-alt-done)))
+
+     (use-package ivy-rich
+       :after counsel
+       :diminish ivy-rich-mode
+       :hook (ivy-mode . ivy-rich-mode)
+       :config
+       (with-no-warnings
+         (setq ivy-format-function #'ivy-format-function-line)))
+   #+END_SRC
+
+** magit
+   Git support at its finest
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package magit
+       :bind (("C-c m" . magit-status)))
+   #+END_SRC
+
+** projectile
+   project management
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package projectile
+       :defer 5
+       :diminish projectile-mode
+       :config
+       (with-no-warnings
+         (projectile-mode 1)))
+
+     (use-package counsel-projectile
+       :bind (("C-c p p" . counsel-projectile-switch-project)
+              ("C-c p f" . counsel-projectile-find-file))
+       :diminish counsel-projectile-mode
+       :config
+       (with-no-warnings
+         (counsel-projectile-mode 1)))
+   #+END_SRC
+** tramp
+   Configuration for working with remote hosts
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (customize-set-variable
+      'tramp-password-prompt-regexp
+      (concat
+       "^.*"
+       (regexp-opt
+        '("passphrase" "Passphrase"
+          "password" "Password"
+          "verification" "Verification")
+        t)
+       ".*:\0? *"))
+   #+END_SRC
+
+* Development
+** Editor
+   General editor configuration
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package rainbow-delimiters
+       :hook (prog-mode . rainbow-delimiters-mode))
+
+     (electric-pair-mode 1)
+
+     (add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+     (setq-default indent-tabs-mode nil
+                   tab-width 4)
+     (defvaralias 'c-basic-offset 'tab-width)
+     (defvaralias 'cperl-indent-level 'tab-width)
+
+     (use-package flycheck
+       :hook (prog-mode . flycheck-mode))
+
+     (use-package flycheck-inline
+       :hook (flycheck-mode . flycheck-inline-mode))
+
+     ;(use-package gud)
+
+     (use-package dockerfile-mode
+       :mode ("\\Dockerfile*\\'" . dockerfile-mode))
+
+     (use-package gitignore-mode
+       :mode ("\\gitignore\\'" . gitignore-mode))
+
+     (use-package json-mode
+       :mode ("\\.json\\'" . json-mode))
+
+     (use-package web-mode
+       :mode ("\\.html\\'" . web-mode))
+
+     (use-package yaml-mode
+       :mode ("\\.yml\\'" . yaml-mode))
+   #+END_SRC
+** Scala
+   Using ENSIME to support Scala development
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package ensime
+       :hook (scala-mode . ensime)
+       :config (setq ensime-startup-notification nil))
+   #+END_SRC
+
+** Rust
+   Using RLS and flycheck-rust for Rust support
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package rust-mode
+       :mode ("\\.rs\\'" . rust-mode)
+       :config (setq rust-format-on-save t))
+
+     (use-package flycheck-rust
+       :after flycheck
+       :hook (flycheck-mode . flycheck-rust-setup))
+
+     (use-package racer
+       :after rust-mode company
+       :diminish racer-mode
+       :hook (rust-mode . racer-mode))
+
+     (use-package cargo
+       :after rust-mode
+       :diminish cargo-minor-mode
+       :hook (rust-mode . cargo-minor-mode))
+   #+END_SRC
+** Golang
+   Supporting golang
+
+   #+BEGIN_SRC emacs-lisp :tangle no
+     (use-package go-mode
+       :mode ("\\.go\\'" . go-mode)
+       :hook (go-mode . gofmt-before-save)
+       :bind (("M-." . godef-jump)
+              ("M-," . pop-tag-mark))
+       :config
+       (add-hook 'flycheck-mode-hook #'flycheck-gometalinter-setup))
+
+     (use-package company-go
+       :demand
+       :config (set (make-local-variable 'company-backends) '(company-go)))
+
+
+     ;; (use-package go-playground)
+     ;; (use-package gorepl-mode)
+     ;; (use-package  go-dlv)
+   #+END_SRC
