@@ -14,13 +14,13 @@ Initialize package management and install necessary packages for the rest of the
   (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/"))
   (add-to-list 'package-archives '("melpa-stable" . "http://stable.melpa.org/packages/"))
 
-  (if (not (package-installed-p 'use-package))
-      (package-install 'use-package))
-
   (if (not package-archive-contents)
       (package-refresh-contents))
 
   (package-initialize)
+
+  (if (not (package-installed-p 'use-package))
+      (package-install 'use-package))
 
   (require 'use-package)
   (setq use-package-always-ensure t)
@@ -270,6 +270,7 @@ Setup this file to tangle on save and compile to byte code.
      (defvaralias 'cperl-indent-level 'tab-width)
 
      (use-package flycheck
+       :diminish flycheck-mode
        :hook (prog-mode . flycheck-mode))
 
      (use-package flycheck-inline
