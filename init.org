@@ -70,7 +70,7 @@ Setup this file to tangle on save and compile to byte code.
 
   (custom-set-variables
    '(initial-frame-alist (quote ((fullscreen . maximized)))))
-  (add-to-list 'default-frame-alist '(font . "Essential PragmataPro 12"))
+  (add-to-list 'default-frame-alist '(font . "Essential PragmataPro 14"))
 
   (setq ring-bell-function
         (lambda ()
@@ -81,6 +81,8 @@ Setup this file to tangle on save and compile to byte code.
                                  orig-fg))))
 
   (global-set-key (kbd "C-c s") #'eshell)
+  (global-set-key (kbd "C-c a") #'ansi-term)
+  (global-set-key (kbd "C-x k") #'kill-this-buffer)
 
   (server-start)
 #+END_SRC
@@ -126,7 +128,9 @@ Setup this file to tangle on save and compile to byte code.
        :config (powerline-default-theme))
 
      (use-package airline-themes
-       :config (load-theme 'airline-solarized-gui t))
+       :config (load-theme 'airline-solarized-alternate-gui t))
+
+     (set-face-foreground 'linum "#859900")
    #+END_SRC
 
 ** Org Mode
@@ -137,6 +141,16 @@ Setup this file to tangle on save and compile to byte code.
    #+END_SRC
 
 * Tools
+** evil
+   Use vi keybindings
+
+   #+BEGIN_SRC emacs-lisp :tangle no
+     (use-package evil
+       :demand
+       :init (with-no-warnings
+               (setq evil-disable-insert-state-bindings t))
+       :config (evil-mode 1))
+   #+END_SRC
 ** diminish
 
    #+BEGIN_SRC emacs-lisp :tangle yes
@@ -174,7 +188,9 @@ Setup this file to tangle on save and compile to byte code.
    #+BEGIN_SRC emacs-lisp :tangle yes
      (use-package counsel
        :diminish counsel-mode ivy-mode
-       :defines (projectile-completion-system magit-completing-read-function)
+       :defines (projectile-completion-system
+                 magit-completing-read-function
+                 ensime-search-interface)
        :config
        (setq ivy-use-virtual-buffers t
              enable-recursive-minibuffers t
@@ -188,9 +204,10 @@ Setup this file to tangle on save and compile to byte code.
 
        (with-eval-after-load 'magit
          (setq magit-completing-read-function 'ivy-completing-read))
+       (with-eval-after-load 'ensime
+         (setq ensime-search-interface 'ivy))
        :hook ((after-init . ivy-mode)
               (ivy-mode . counsel-mode))
-       :config
        :bind (("C-s" . swiper)
               ("C-c C-r" . ivy-resume)
               ("C-c g" . counsel-git)
@@ -252,6 +269,15 @@ Setup this file to tangle on save and compile to byte code.
        ".*:\0? *"))
    #+END_SRC
 
+** ansi-term (zsh)
+   Setup Emacs to use zsh by default and some key-bindings for terminal in Emacs
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+   (with-no-warnings
+     (eval-after-load "term"
+       '(define-key term-raw-map (kbd "C-c C-y") #'term-paste)))
+   #+END_SRC
+
 * Development
 ** Editor
    General editor configuration
@@ -299,7 +325,23 @@ Setup this file to tangle on save and compile to byte code.
    #+BEGIN_SRC emacs-lisp :tangle yes
      (use-package ensime
        :hook (scala-mode . ensime)
-       :config (setq ensime-startup-notification nil))
+       :config
+       (with-no-warnings
+         (setq ensime-startup-notification nil)
+
+         (defun ensime-sbt-do-fmt ()
+           "WORKAROUND "
+           (interactive)
+           (sbt:command "fmt"))
+
+         (bind-key "C-c C-b F" #'ensime-sbt-do-fmt scala-mode-map)
+
+         (defun ensime-sbt-do-fmt-only ()
+           "Format single file."
+           (interactive)
+           (sbt:command (concat "scalafmtOnly " buffer-file-name) 0))
+
+         (bind-key "C-c C-b f" #'ensime-sbt-do-fmt-only scala-mode-map)))
    #+END_SRC
 
 ** Rust
@@ -344,4 +386,15 @@ Setup this file to tangle on save and compile to byte code.
      ;; (use-package go-playground)
      ;; (use-package gorepl-mode)
      ;; (use-package  go-dlv)
+   #+END_SRC
+** Python
+   Configuration to support python development
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package elpy
+       :diminish elpy-mode
+       :config
+       (with-no-warnings
+         (elpy-enable)
+         (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))))
    #+END_SRC
