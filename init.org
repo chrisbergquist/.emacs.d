@@ -247,7 +247,8 @@ Setup this file to tangle on save and compile to byte code.
 
      (use-package counsel-projectile
        :bind (("C-c p p" . counsel-projectile-switch-project)
-              ("C-c p f" . counsel-projectile-find-file))
+              ("C-c p f" . counsel-projectile-find-file)
+              ("C-c p k" . projectile-kill-buffers))
        :diminish counsel-projectile-mode
        :config
        (with-no-warnings
