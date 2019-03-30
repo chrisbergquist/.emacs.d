@@ -279,6 +279,25 @@ Setup this file to tangle on save and compile to byte code.
        '(define-key term-raw-map (kbd "C-c C-y") #'term-paste)))
    #+END_SRC
 
+** multiple-cursors
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package multiple-cursors
+       :diminish
+       :ensure
+       :config
+       (global-set-key (kbd "C-S-c C-S-c") 'mc/edit-lines)
+       (global-set-key (kbd "C->") 'mc/mark-next-like-this)
+       (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+       (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this))
+   #+END_SRC
+** git gutter
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package git-gutter-fringe
+       :diminish
+       :config
+       (setq git-gutter-fr:side 'right-fringe)
+       (global-git-gutter-mode))
+   #+END_SRC
 * Development
 ** Editor
    General editor configuration
@@ -340,7 +359,8 @@ Setup this file to tangle on save and compile to byte code.
          (defun ensime-sbt-do-fmt-only ()
            "Format single file."
            (interactive)
-           (sbt:command (concat "scalafmtOnly " buffer-file-name) 0))
+           (sbt:command (concat "scalafmtOnly " buffer-file-name) 0)
+           (other-window -1))
 
          (bind-key "C-c C-b f" #'ensime-sbt-do-fmt-only scala-mode-map)))
    #+END_SRC
