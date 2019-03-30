@@ -293,10 +293,9 @@ Setup this file to tangle on save and compile to byte code.
 ** git gutter
    #+BEGIN_SRC emacs-lisp :tangle yes
      (use-package git-gutter-fringe
-       :diminish
+       :diminish git-gutter-mode
        :config
-       (setq git-gutter-fr:side 'right-fringe)
-       (global-git-gutter-mode))
+       (global-git-gutter-mode +1))
    #+END_SRC
 * Development
 ** Editor
