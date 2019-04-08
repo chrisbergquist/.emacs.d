@@ -164,6 +164,10 @@ Setup this file to tangle on save and compile to byte code.
        :hook (org-mode . org-bullets-mode))
    #+END_SRC
 
+** General
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (set-cursor-color "#DC322F")
+   #+END_SRC
 * Tools
 ** evil
    Use vi keybindings
