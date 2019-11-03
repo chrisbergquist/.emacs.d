@@ -70,7 +70,7 @@ Setup this file to tangle on save and compile to byte code.
 
   (custom-set-variables
    '(initial-frame-alist (quote ((fullscreen . maximized)))))
-  (add-to-list 'default-frame-alist '(font . "Essential PragmataPro 14"))
+  (add-to-list 'default-frame-alist '(font . "Essential PragmataPro 16"))
 
   (setq ring-bell-function
         (lambda ()
@@ -167,6 +167,9 @@ Setup this file to tangle on save and compile to byte code.
 ** General
    #+BEGIN_SRC emacs-lisp :tangle yes
      (set-cursor-color "#DC322F")
+     (add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
+     (add-to-list 'default-frame-alist '(ns-appearance . dark))
+     (use-package all-the-icons)
    #+END_SRC
 * Tools
 ** evil
@@ -217,8 +220,7 @@ Setup this file to tangle on save and compile to byte code.
      (use-package counsel
        :diminish counsel-mode ivy-mode
        :defines (projectile-completion-system
-                 magit-completing-read-function
-                 ensime-search-interface)
+                 magit-completing-read-function)
        :config
        (setq ivy-use-virtual-buffers t
              enable-recursive-minibuffers t
@@ -232,8 +234,6 @@ Setup this file to tangle on save and compile to byte code.
 
        (with-eval-after-load 'magit
          (setq magit-completing-read-function 'ivy-completing-read))
-       (with-eval-after-load 'ensime
-         (setq ensime-search-interface 'ivy))
        :hook ((after-init . ivy-mode)
               (ivy-mode . counsel-mode))
        :bind (("C-s" . swiper)
@@ -250,8 +250,7 @@ Setup this file to tangle on save and compile to byte code.
        :diminish ivy-rich-mode
        :hook (ivy-mode . ivy-rich-mode)
        :config
-       (with-no-warnings
-         (setq ivy-format-function #'ivy-format-function-line)))
+       (setq ivy-format-function #'ivy-format-function-line))
    #+END_SRC
 
 ** magit
@@ -338,7 +337,7 @@ Setup this file to tangle on save and compile to byte code.
      (add-hook 'before-save-hook 'delete-trailing-whitespace)
 
      (setq-default indent-tabs-mode nil
-                   tab-width 4)
+                   tab-width 2)
      (defvaralias 'c-basic-offset 'tab-width)
      (defvaralias 'cperl-indent-level 'tab-width)
 
@@ -346,13 +345,14 @@ Setup this file to tangle on save and compile to byte code.
        :diminish flycheck-mode
        :hook (prog-mode . flycheck-mode))
 
-     (use-package flycheck-inline
-       :hook (flycheck-mode . flycheck-inline-mode))
+     ;; (use-package flycheck-inline
+     ;;   :hook (flycheck-mode . flycheck-inline-mode))
 
      ;(use-package gud)
 
      (use-package dockerfile-mode
-       :mode ("\\Dockerfile*\\'" . dockerfile-mode))
+       :mode ("\\Dockerfile*\\'" . dockerfile-mode)
+       :hook (dockerfile-mode . lsp))
 
      (use-package gitignore-mode
        :mode ("\\gitignore\\'" . gitignore-mode))
@@ -365,84 +365,128 @@ Setup this file to tangle on save and compile to byte code.
 
      (use-package yaml-mode
        :mode ("\\.yml\\'" . yaml-mode))
+
+     (use-package neotree
+       :bind ("C-c t" . neotree-toggle)
+       :config (with-no-warnings
+                 (setq neo-theme (if (display-graphic-p) 'icons 'arrows))))
    #+END_SRC
-** Scala
-   Using ENSIME to support Scala development
+** LSP Supported Languages
+   Adding support for languages that have LSP
 
    #+BEGIN_SRC emacs-lisp :tangle yes
-     (use-package ensime
-       :hook (scala-mode . ensime)
+     (use-package lsp-mode
+       :config (setq lsp-prefer-flymake nil))
+
+     (use-package lsp-ui)
+
+     (use-package company-lsp)
+   #+END_SRC
+
+** Scala
+   Using Metals to support Scala development
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     ;; Enable scala-mode and sbt-mode
+     (use-package scala-mode
+       :hook (scala-mode . lsp)
+       :bind (:map scala-mode-map ("C-c C-f" . lsp-format-buffer))
+       :mode "\\.s\\(cala\\|bt\\)$")
+
+     (use-package lsp-treemacs
+       :bind (:map scala-mode-map ("C-c C-t" . lsp-metals-treeview))
        :config
-       (with-no-warnings
-         (setq ensime-startup-notification nil)
+       (lsp-metals-treeview-enable t))
 
-         (defun ensime-sbt-do-fmt ()
-           "WORKAROUND "
-           (interactive)
-           (sbt:command "fmt"))
+     (defun sbt-compile ()
+       "Invoke sbt compile"
+       (interactive)
+       (sbt-command "compile"))
 
-         (bind-key "C-c C-b F" #'ensime-sbt-do-fmt scala-mode-map)
+     (use-package sbt-mode
+       :bind (("C-c b s" . sbt-start)
+              ("C-c b w" . sbt-switch-to-active-sbt-buffer)
+              ("C-c b r" . sbt-run-previous-command)
+              ("C-c b m" . sbt-command)
+              ("C-c b c" . sbt-compile))
+       :config
+       ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
+       ;; allows using SPACE when in the minibuffer
+       (substitute-key-definition
+        'minibuffer-complete-word
+        'self-insert-command
+        minibuffer-local-completion-map))
+   #+END_SRC
 
-         (defun ensime-sbt-do-fmt-only ()
-           "Format single file."
-           (interactive)
-           (sbt:command (concat "scalafmtOnly " buffer-file-name) 0)
-           (other-window -1))
+** Java
+   Add support for Java via lsp-java
 
-         (bind-key "C-c C-b f" #'ensime-sbt-do-fmt-only scala-mode-map)))
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package lsp-java
+       :hook (java-mode . lsp))
    #+END_SRC
 
 ** Rust
    Using RLS and flycheck-rust for Rust support
 
    #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package toml-mode)
+
      (use-package rust-mode
-       :mode ("\\.rs\\'" . rust-mode)
+       :hook (rust-mode . lsp)
        :config (setq rust-format-on-save t))
+
+     ;; Add keybindings for interacting with Cargo
+     (use-package cargo
+       :hook (rust-mode . cargo-minor-mode))
 
      (use-package flycheck-rust
        :after flycheck
        :hook (flycheck-mode . flycheck-rust-setup))
-
-     (use-package racer
-       :after rust-mode company
-       :diminish racer-mode
-       :hook (rust-mode . racer-mode))
-
-     (use-package cargo
-       :after rust-mode
-       :diminish cargo-minor-mode
-       :hook (rust-mode . cargo-minor-mode))
    #+END_SRC
+
 ** Golang
    Supporting golang
 
-   #+BEGIN_SRC emacs-lisp :tangle no
+   #+BEGIN_SRC emacs-lisp :tangle yes
      (use-package go-mode
-       :mode ("\\.go\\'" . go-mode)
-       :hook (go-mode . gofmt-before-save)
-       :bind (("M-." . godef-jump)
-              ("M-," . pop-tag-mark))
-       :config
-       (add-hook 'flycheck-mode-hook #'flycheck-gometalinter-setup))
-
-     (use-package company-go
-       :demand
-       :config (set (make-local-variable 'company-backends) '(company-go)))
-
-
-     ;; (use-package go-playground)
-     ;; (use-package gorepl-mode)
-     ;; (use-package  go-dlv)
+       :hook (go-mode . lsp))
    #+END_SRC
+
 ** Python
    Configuration to support python development
 
    #+BEGIN_SRC emacs-lisp :tangle yes
-     (use-package elpy
-       :diminish elpy-mode
-       :config
-       (with-no-warnings
-         (elpy-enable)
-         (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))))
+     (use-package lsp-python-ms
+       :hook (python-mode . (lambda ()
+                              (require 'lsp-python-ms)
+                              (lsp))))
+   #+END_SRC
+
+** C/C++
+   Support for C/C++
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (add-hook 'c-mode-hook 'lsp-mode)
+     (add-hook 'c++-mode-hook 'lsp-mode)
+   #+END_SRC
+
+** Groovy
+   Support for Groovy
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package groovy-mode
+       :hook (groovy-mode . lsp)
+       :config (setq groovy-indent-offset 2))
+
+   #+END_SRC
+
+** HTML
+   Support for HTML
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (add-hook 'html-mode-hook 'lsp)
+
+     (require 'css-mode)
+     (add-hook 'css-mode-hook 'lsp)
    #+END_SRC
