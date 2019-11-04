@@ -347,9 +347,16 @@ Setup this file to tangle on save and compile to byte code.
 
    #+BEGIN_SRC emacs-lisp :tangle yes
      (use-package treemacs
-       :bind ("C-c t" . treemacs))
-
-     (use-package treemacs-projectile)
+       :bind ("C-c t" . treemacs)
+       :config
+       (add-to-list 'treemacs-pre-file-insert-predicates #'treemacs-is-file-git-ignored?))
+     (use-package treemacs-projectile
+       :after treemacs projectile)
+     (use-package treemacs-magit
+       :after treemacs magit)
+     (use-package treemacs-icons-dired
+       :after treemacs dired
+       :config (treemacs-icons-dired-mode))
    #+END_SRC
 
 * Development
