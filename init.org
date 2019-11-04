@@ -342,6 +342,16 @@ Setup this file to tangle on save and compile to byte code.
        :config
        (global-git-gutter-mode +1))
    #+END_SRC
+** treemacs
+   Adding treemacs for project file tree views.
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package treemacs
+       :bind ("C-c t" . treemacs))
+
+     (use-package treemacs-projectile)
+   #+END_SRC
+
 * Development
 ** Editor
    General editor configuration
@@ -383,12 +393,8 @@ Setup this file to tangle on save and compile to byte code.
 
      (use-package yaml-mode
        :mode ("\\.yml\\'" . yaml-mode))
-
-     (use-package neotree
-       :bind ("C-c t" . neotree-toggle)
-       :config (with-no-warnings
-                 (setq neo-theme (if (display-graphic-p) 'icons 'arrows))))
    #+END_SRC
+
 ** LSP Supported Languages
    Adding support for languages that have LSP
 
