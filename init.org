@@ -81,7 +81,7 @@ Setup this file to tangle on save and compile to byte code.
                                  orig-fg))))
 
   (global-set-key (kbd "C-c s") #'eshell)
-  (global-set-key (kbd "C-c a") #'ansi-term)
+  (global-set-key (kbd "C-c v") #'vterm)
   (global-set-key (kbd "C-x k") #'kill-this-buffer)
 
   (server-start)
@@ -319,9 +319,11 @@ Setup this file to tangle on save and compile to byte code.
    Setup Emacs to use zsh by default and some key-bindings for terminal in Emacs
 
    #+BEGIN_SRC emacs-lisp :tangle yes
-   (with-no-warnings
-     (eval-after-load "term"
-       '(define-key term-raw-map (kbd "C-c C-y") #'term-paste)))
+     (with-no-warnings
+       (eval-after-load "term"
+         '(define-key term-raw-map (kbd "C-c C-y") #'term-paste)))
+
+     (use-package vterm)
    #+END_SRC
 
 ** multiple-cursors
@@ -407,11 +409,16 @@ Setup this file to tangle on save and compile to byte code.
 
    #+BEGIN_SRC emacs-lisp :tangle yes
      (use-package lsp-mode
-       :config (setq lsp-prefer-flymake nil))
+       :config
+       (setq lsp-prefer-flymake nil)
+       (setq gc-cons-threshold 100000000)
+       (setq read-process-output-max (* 1024 1024))
+       (setq lsp-idle-delay 0.500))
 
      (use-package lsp-ui)
 
-     (use-package company-lsp)
+     (use-package company-lsp
+       :config (setq lsp-prefer-capf t))
    #+END_SRC
 
 ** Scala
@@ -428,25 +435,6 @@ Setup this file to tangle on save and compile to byte code.
        :bind (:map scala-mode-map ("C-c C-t" . lsp-metals-treeview))
        :config
        (lsp-metals-treeview-enable t))
-
-     (defun sbt-compile ()
-       "Invoke sbt compile"
-       (interactive)
-       (sbt-command "compile"))
-
-     (use-package sbt-mode
-       :bind (("C-c b s" . sbt-start)
-              ("C-c b w" . sbt-switch-to-active-sbt-buffer)
-              ("C-c b r" . sbt-run-previous-command)
-              ("C-c b m" . sbt-command)
-              ("C-c b c" . sbt-compile))
-       :config
-       ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
-       ;; allows using SPACE when in the minibuffer
-       (substitute-key-definition
-        'minibuffer-complete-word
-        'self-insert-command
-        minibuffer-local-completion-map))
    #+END_SRC
 
 ** Java
