@@ -83,6 +83,7 @@ Setup this file to tangle on save and compile to byte code.
   (global-set-key (kbd "C-c s") #'eshell)
   (global-set-key (kbd "C-c v") #'vterm)
   (global-set-key (kbd "C-x k") #'kill-this-buffer)
+  (global-set-key (kbd "C-M-.") 'xref-find-definitions-other-window)
 
   (server-start)
 #+END_SRC
@@ -508,4 +509,12 @@ Setup this file to tangle on save and compile to byte code.
 
      (require 'css-mode)
      (add-hook 'css-mode-hook 'lsp)
+   #+END_SRC
+
+** Kotlin
+   Support for Kotlin via LSP
+
+   #+BEGIN_SRC emacs-lisp :tangle yes
+     (use-package kotlin-mode
+       :hook (kotlin-mode . lsp))
    #+END_SRC
